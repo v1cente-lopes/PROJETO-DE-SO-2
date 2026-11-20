@@ -129,14 +129,14 @@ static int make_dir(const char *path){
 
 
 /**
- * Creates /tmp/CloudIST/<res>/<vm> for every VM of the reservation and copies
+ * Creates /tmp/CloudIST-59/<res>/<vm> for every VM of the reservation and copies
  * the input folder of the VM type into it.
  */
 static int copy_reservation_inputs(Reservation *res){
   char res_dir[MAX_PATH_SIZE];
-  snprintf(res_dir, sizeof(res_dir), "/tmp/CloudIST/%s", res->id);
+  snprintf(res_dir, sizeof(res_dir), "/tmp/CloudIST-59/%s", res->id);
 
-  if(make_dir("/tmp/CloudIST") != 0 || make_dir(res_dir) != 0)
+  if(make_dir("/tmp/CloudIST-59") != 0 || make_dir(res_dir) != 0)
     return 1;
 
   for(size_t i = 0; i < res->num_vms; i++){
