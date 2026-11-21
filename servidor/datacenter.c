@@ -17,6 +17,7 @@ void datacenter_init(DataCenter *dc) {
   dc->num_reservations = 0;
 
   dc->configured = 0;
+  dc->host_cores = 0;
 }
 
 

@@ -50,11 +50,10 @@ int main(int argc, char **argv) {
         parse_double_arg(argv[4], &cpu) != 0 ||
         parse_size_t_arg(argv[5], &host_cores) != 0 ||
         parse_size_t_arg(argv[7], &max_threads) != 0 ||
-        max_threads == 0) {
+        max_threads == 0 || host_cores == 0) {
         fprintf(stderr, "Invalid command line arguments.\n");
         return 1;
     }
-    (void)host_cores; // ainda não usado (ver enunciado atualizado)
 
     DataCenter dc;
     datacenter_init(&dc);
@@ -70,6 +69,8 @@ int main(int argc, char **argv) {
         datacenter_destroy(&dc);
         return 1;
     }
+    
+    dc.host_cores = host_cores;
 
     // Configurar a fila para as worker threads
     static ThreadPoolQueue queue;

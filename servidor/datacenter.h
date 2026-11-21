@@ -85,6 +85,7 @@ typedef struct DataCenter {
     size_t num_reservations;
 
 	int configured;		      // Wheter the datacenter is configured or not.
+    size_t host_cores; //cores reais da máquina que simula o data center
 } DataCenter;
 
 

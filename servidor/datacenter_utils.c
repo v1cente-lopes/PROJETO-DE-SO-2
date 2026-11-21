@@ -331,7 +331,7 @@ int spawn_all_vms(DataCenter *dc, Reservation *res) {
         }
 
         // cálculo da percentagem de CPU exigida pela VM
-        double cpu_pct = vm->type->required.cpu / total_cpus * 100.0;
+        double cpu_pct = vm->type->required.cpu / total_cpus *(double)dc->host_cores * 100.0;
         snprintf(cpulimit_str, sizeof(cpulimit_str), "%.2f", cpu_pct);
 
         // evita duplicação de output em buffer no processo filho após fork
