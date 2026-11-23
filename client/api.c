@@ -196,9 +196,30 @@ int cloudIst_connect(char const* req_pipe_path, char const* resp_pipe_path, char
 
 
 int cloudIst_disconnect(void){
-    //TODO close pipes
-    printf("Implement me pls\n");
-    return 0;
+    //verificar se chegou a haver connect
+    if(fd_req_global == -1){
+        return 1;
+    }
+
+    //enviar pedido de desconexão
+    char opcode = (char) DISCONNECT;
+    int num = 0;
+    //escreve no fifo de pedido (request)
+    if(write_all(fd_req_global, &opcode, sizeof(opcode)) != 1){
+        num = 1;
+    }
+    
+    //fechar os fifos
+    close(fd_req_global);
+    close(fd_resp_global);
+
+    //apagar os fifos do cliente
+    unlink(req_path_global);
+    unlink(resp_path_global);
+
+    fd_req_global = -1;
+    fd_resp_global = -1;
+    return num;
 }
 
 int cloudIst_define(VMType vm_type) {
