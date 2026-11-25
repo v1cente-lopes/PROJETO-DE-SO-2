@@ -9,3 +9,6 @@
 #define MAX_RESERVATIONS_ITEMS 32
 #define MAX_RESERVATION_VMS    128
 #define MAX_CONF_FILES 1024
+
+//tamanho máximo do caminho do pipe
+#define MAX_PIPE_PATH_LENGTH 40

@@ -18,6 +18,40 @@
 //para usar errno e EEXIST
 #include <errno.h> 
 
+//do cliente
+int read_all(int fd, void *buffer, size_t size) {
+
+  size_t bytes_read = 0;
+  while (bytes_read < size) {
+    ssize_t result = read(fd, buffer + bytes_read, size - bytes_read);
+    if (result == -1) {
+      perror("Failed to read from pipe");
+      return -1;
+    } else if (result == 0) {
+      return 0;
+    }
+
+    bytes_read += (size_t)result;
+  }
+
+  return 1;
+}
+
+//do cliente
+int write_all(int fd, const void *buffer, size_t size) {
+  size_t bytes_written = 0;
+  while (bytes_written < size) {
+    ssize_t result = write(fd, buffer + bytes_written, size - bytes_written);
+    if (result == -1) {
+      perror("Failed to write to pipe");
+      return -1;
+    }
+
+    bytes_written += (size_t)result;
+  }
+
+  return 1;
+}
 
 int path_exists(const char *path){
   struct stat st;
@@ -213,7 +247,6 @@ int copy_directory_recursively(const char *source, const char *dest){
   closedir(dir); 
   return 0;
 }
-
 
 // Função executada por cada worker thread para processar os ficheiros da fila
 void *process_conf_file(void *arg) {
