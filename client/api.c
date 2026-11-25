@@ -224,31 +224,249 @@ int cloudIst_disconnect(void){
 
 int cloudIst_define(VMType vm_type) {
     (void) vm_type;
-    //TODO: send define command to the server (through the request pipe) and wait for the response (through the response pipe)
-    printf("Implement me pls\n");
-    return 0;
+
+    //verificar se já houve connect
+    if(fd_req_global == -1){
+        return 1;
+    }
+
+    //montar a mensagem de define, e o tamanho de bytes
+    //OPCODE(1) + id(40) + input_folder(1024) + exec_path(1024) + ram(size_t) + disk(size_t) + cpu(size_t)
+    char message[2113];
+    
+    //inicia o array a 0
+    memset(message, 0, sizeof(message));
+    size_t offset = 0;
+    
+    //o primeiro bit da mensagem, correspondente ao OPCODE
+    message[offset] = (char) DEFINE;
+    offset += 1;
+
+    //bytes 1-40: o id do cliente
+    memcpy(message + offset, vm_type.id, strlen(vm_type.id));
+    offset += MAX_STRING_SIZE;
+
+    //bytes 41-1065: o tamanho do input_folder
+    memcpy(message + offset, vm_type.input_folder, strlen(vm_type.input_folder));
+    offset += MAX_PATH_SIZE;
+
+    //bytes 1066-2089: o tamanho do exec_path
+    memcpy(message + offset, vm_type.exec_path, strlen(vm_type.exec_path));
+    offset += MAX_PATH_SIZE;
+
+    //o tamanho do campo da ram
+    memcpy(message + offset, &vm_type.required.ram, sizeof(size_t));
+    offset += sizeof(size_t);
+
+    //o tamanho do campo do disk
+    memcpy(message + offset, &vm_type.required.disk, sizeof(size_t));
+    offset += sizeof(size_t);
+
+    //o fim, o campo da cpu
+    memcpy(message + offset, &vm_type.required.cpu, sizeof(double));
+
+    //write_all escreve no pipe de registo do servidor, a mensagem do cliente
+    if(write_all(fd_req_global, message, sizeof(message)) != 1){
+        return 1;
+    }
+
+    //ler a resposta do servidor
+    char result;
+    if(read_all(fd_resp_global, &result, sizeof(result)) != 1){
+        return 1;
+    }
+    //confirmar que o resultado recebido foi 0
+    if(result == 0){
+        return 0;
+    }
+    else{
+        return 1;
+    }
 }
 
 int cloudIst_reserve(Reservation reservation) {
     (void) reservation;
-    //TODO: send reserve command to the server (through the request pipe) and wait for the response (through the response pipe)
-    printf("Implement me pls\n");
-    return 0;
+
+    //verificar se já houve connect
+    if(fd_req_global == -1){
+        return 1;
+    }
+
+    //montar a mensagem de reserve, e o tamanho de bytes
+    //OPCODE(1) + id(40) + items_count(size_t) + vm_type_id(40) + amount(size_t) + server_id(size_t)
+    char message[1841];
+    
+    //inicia o array a 0
+    memset(message, 0, sizeof(message));
+    size_t offset = 0;
+    
+    //o primeiro bit da mensagem, correspondente ao OPCODE
+    message[offset] = (char) RESERVE;
+    offset += 1;
+
+    //bytes 1-40: o id da reserva
+    memcpy(message + offset, reservation.id, strlen(reservation.id));
+    offset += MAX_STRING_SIZE;
+
+    //bytes 41-1065: o tamanho do items_count
+    memcpy(message + offset, &reservation.items_count, sizeof(size_t));
+    offset += sizeof(size_t);
+
+    for(size_t i = 0; i < reservation.items_count; i++){
+        //bytes 1066-2089: o tamanho do vm_type_id, por cada item
+        memcpy(message + offset, reservation.items[i].vm_type_id, strlen(reservation.items[i].vm_type_id));
+        offset += MAX_STRING_SIZE;
+
+        //o tamanho do campo do amount
+        memcpy(message + offset, &reservation.items[i].amount, sizeof(size_t));
+        offset += sizeof(size_t);
+
+        //o tamanho do campo do server_id
+        memcpy(message + offset, &reservation.items[i].server_id, sizeof(size_t));
+        offset += sizeof(size_t);
+    }
+
+    //write_all escreve no pipe de registo do servidor, a mensagem do cliente
+    if(write_all(fd_req_global, message, offset) != 1){
+        return 1;
+    }
+
+    //ler a resposta do servidor
+    char result;
+    if(read_all(fd_resp_global, &result, sizeof(result)) != 1){
+        return 1;
+    }
+    //confirmar que o resultado recebido foi 0
+    if(result == 0){
+        return 0;
+    }
+    else{
+        return 1;
+    }
 }
 
 int cloudIst_run(char *reservation_id) {
     (void) reservation_id;
-    //TODO: send run/arranca command to the server (through the request pipe) and wait for the response (through the response pipe)
-    printf("Implement me pls\n");
-    return 0;
+
+    if(strlen(reservation_id) >= MAX_STRING_SIZE){
+        return 1;
+    }
+
+    //verificar se já houve connect
+    if(fd_req_global == -1){
+        return 1;
+    }
+
+    //montar a mensagem de run, e o tamanho de bytes
+    //OPCODE(1) + id(40)
+    char message[41];
+    
+    //inicia o array a 0
+    memset(message, 0, sizeof(message));
+    size_t offset = 0;
+    
+    //o primeiro bit da mensagem, correspondente ao OPCODE
+    message[offset] = (char) EXE;
+    offset += 1;
+
+    //bytes 1-40: o id da reserva
+    memcpy(message + offset, reservation_id, strlen(reservation_id));
+    offset += MAX_STRING_SIZE;
+
+
+    //write_all escreve no pipe de registo do servidor, a mensagem do cliente
+    if(write_all(fd_req_global, message, sizeof(message)) != 1){
+        return 1;
+    }
+
+    //validar o resultado obtido
+    char result;
+    if(read_all(fd_resp_global, &result, sizeof(result)) != 1){
+        return 1;
+    }
+    //confirmar que o resultado recebido foi 0
+    if(result == 0){
+        return 0;
+    }
+    else{
+        return 1;
+    }
 }
 
 int cloudIst_list_vms() {
-    //TODO: send List command to the server (through the request pipe) and wait for the response (through the response pipe)
-    printf("Implement me pls\n");
 
-    //TODO: dont forget to print output to stdout using the format from function print_vm()
-    return 0;
+    //verificar se já houve connect
+    if(fd_req_global == -1){
+        return 1;
+    }
+
+    //montar a mensagem de pedido, que é apenas o OPCODE
+    char opcode = (char) LIST;
+
+    //write_all escreve no pipe de registo do servidor, a mensagem do cliente
+    if(write_all(fd_req_global, &opcode, sizeof(opcode)) != 1){
+        return 1;
+    }
+    
+    //tratar do result, que vem da resposta do servidor
+    char result;
+    if(read_all(fd_resp_global, &result, sizeof(result)) != 1){
+        return 1;
+    }
+
+    // ler numero de vms
+    size_t num_vms;
+    if(read_all(fd_resp_global, &num_vms, sizeof(num_vms)) != 1){
+        return 1;
+    }
+
+    //ler a vms uma a uma, e os campos são:
+    //vm_id(44), vm_type_id(40), client_id(4), server_id(size_t), vm_state(40)
+    for(size_t i = 0; i < num_vms; i++){
+        char entry[MAX_VM_ID_STRING + MAX_STRING_SIZE + sizeof(int) + sizeof(size_t) + 1];
+        
+        if(read_all(fd_resp_global, entry, sizeof(entry)) != 1) {
+            return 1;
+        }
+        char vm_id[MAX_VM_ID_STRING];
+        char vm_type_id[MAX_STRING_SIZE];
+        size_t server_id;
+        char vm_state;
+        size_t offset = 0;
+
+        //vm_id(44)
+        memcpy(vm_id, entry + offset, MAX_VM_ID_STRING);
+        //garantir que a string acaba em \0
+        vm_id[MAX_VM_ID_STRING - 1] = '\0';
+        offset += MAX_VM_ID_STRING;
+        
+        // vm_type_id(40)
+        memcpy(vm_type_id, entry + offset, MAX_STRING_SIZE);
+        //garantir que a string acaba em \0
+        vm_type_id[MAX_STRING_SIZE - 1] = '\0';
+        offset += MAX_STRING_SIZE;
+
+        //print_vm não usa o client_id, então avançamos só
+        offset += sizeof(int);
+
+        //server_id
+        memcpy(&server_id, entry + offset, sizeof(size_t));
+        offset += sizeof(size_t);
+
+        //vm_state, é 1 byte
+        vm_state = entry[offset];
+
+        //imprime cada vm da reserva em causa
+        print_vm(vm_id, vm_type_id, server_id, vm_state);
+    }
+
+    //valida o resultado
+    if(result == 0){
+        return 0;
+    }
+    else{
+        return 1;
+    }
 }
 
 

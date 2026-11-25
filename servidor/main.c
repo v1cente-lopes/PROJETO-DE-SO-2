@@ -16,7 +16,7 @@ pthread_mutex_t dc_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int main(int argc, char **argv) {
     if (argc != 8) {
-        fprintf(stderr, "Usage: %s <servers> <ram> <disk> <cpus> <host_cores> <input_dir> <max_threads>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <servers> <ram> <disk> <cpus> <host_cores> <max_clients> <reg_fifo_name>\n", argv[0]);
         return 1;
     }
     const char *input_dir = argv[6];
@@ -30,11 +30,13 @@ int main(int argc, char **argv) {
     static char conf_files[MAX_CONF_FILES][MAX_STRING_SIZE];
     size_t num_conf_files;
 
+    /*
     // Obtém a lista de ficheiros .conf ordenados alfabéticamente
     if (list_conf_files(input_dir, conf_files, &num_conf_files) != 0) {
         fprintf(stderr, "Failed to list .conf files.\n");
         return 1;
     }
+    */
 
     //declaração das variáveis para guardar os argumentos de linha de comando 
     size_t servers;
@@ -72,6 +74,7 @@ int main(int argc, char **argv) {
     
     dc.host_cores = host_cores;
 
+    
     // Configurar a fila para as worker threads
     static ThreadPoolQueue queue;
     queue.num_conf_files = num_conf_files;
@@ -101,10 +104,11 @@ int main(int argc, char **argv) {
         created++;
     }
 
+    /*
     // Aguardar que todas as worker threads concluam o processamento
     for (size_t i = 0; i < created; i++) {
         pthread_join(threads[i], NULL);
-    }
+    }*/
 
     // Espera que as VMs ainda em execução terminem (e sejam destruídas)
     wait_for_all_vms(&dc);
