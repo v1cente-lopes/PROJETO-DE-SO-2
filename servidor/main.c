@@ -15,6 +15,46 @@
 // Mutex global para proteger o estado do datacenter
 pthread_mutex_t dc_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+//PLACEMENT TEMPORARIO - explicar para que serve
+typedef struct Session{
+    //fifo de pedidos (de onde o servidor lê)
+    int req_fd;
+    //fifo de respostas (o servidor escreve)
+    int resp_fd;
+    //id recebido do connect
+    unsigned int client_id;
+    //1 se já fez a reserva com sucesso
+    int has_reservation;
+    //o id dessa reserva
+    char reservation_id[MAX_STRING_SIZE];
+} session;
+
+//PLACEMENT TEMPORARIO - explicar o que faz
+void handle_session(session *s, DataCenter *dc){
+    //ciclo infinito, pois o cliente pode enviar os pedidos que quiser
+    while(1){
+        char opcode;
+        //se o read_all for diferente de 1, há dois casos:
+        //0 = EOF, o cliente fechou/morreu
+        //-1 = erro, ou seja, a sessão acabou
+        if(read_all(s->req_fd, &opcode, sizeof(opcode)) != 1){
+            return;
+        }
+        switch(opcode){
+            //caso seja um comando de disconnect, retorna
+            case DISCONNECT:
+                return;
+            default:
+            //no caso de um opcode desconhecido, ignora
+                break;
+        }
+    }
+}
+
+//PLACEMENT TEMPORARIO - explicar o que faz (usar static?)
+void session_cleanup(session *s, DataCenter *dc){
+    
+}
 
 int main(int argc, char **argv) {
     if (argc != 8) {
@@ -116,7 +156,10 @@ int main(int argc, char **argv) {
     //abre o fifo de registo
     int fd_register = open(reg_fifo_name, O_RDWR);
     //se a abertura deste fifo falhar, apagamos os anteriores
-    if(fd_server == -1){
+    if(fd_register == -1){
+        perror("open register FIFO");
+        unlink(reg_fifo_name);
+        datacenter_destroy(&dc);
         return 1;
     }
 
@@ -130,9 +173,83 @@ int main(int argc, char **argv) {
         if(opcode != CONNECT){
             continue;
         }
-        else{
-            /*bloqueado*/
+        //ler os 84 bytes (a seguir ao opcode) do pedido de connect para um buffer
+        //req_path(40) + resp_path(40) + client_id(unsigned int)(4)
+        char connect_req[2 * MAX_PIPE_PATH_LENGTH + sizeof(unsigned int)];
+        if(read_all(fd_register, connect_req, sizeof(connect_req)) != 1){
+            continue;
         }
+
+        //vamos separar os campos do pedido para serem usados mais à frente
+        char req_path[MAX_PIPE_PATH_LENGTH];
+        char resp_path[MAX_PIPE_PATH_LENGTH];
+        unsigned int client_id;
+        size_t offset = 0;
+
+        // caminho do FIFO de pedidos - req
+        memcpy(req_path, connect_req + offset, MAX_PIPE_PATH_LENGTH);
+        req_path[MAX_PIPE_PATH_LENGTH - 1] = '\0';
+        offset += MAX_PIPE_PATH_LENGTH;
+
+        // caminho do FIFO de respostas - resp
+        memcpy(resp_path, connect_req + offset, MAX_PIPE_PATH_LENGTH);
+        resp_path[MAX_PIPE_PATH_LENGTH - 1] = '\0';
+        offset += MAX_PIPE_PATH_LENGTH;
+
+        //id do cliente - client_id
+        memcpy(&client_id, connect_req + offset, sizeof(unsigned int));
+
+        //abrir o fifo de pedidos para leitura
+        int req_fd = open(req_path, O_RDONLY); 
+        //se falhar a abertura, continue
+        if(req_fd == -1){
+            continue;
+        }
+
+        //abrir o fifo de respostas para escrita
+        int resp_fd = open(resp_path, O_WRONLY);
+        //se falhar a abertura, fecha o de pedidos e continue
+        if(resp_fd  == -1){
+            close(req_fd);
+            continue;
+        }
+        //vamos montar a resposta do servidor, ao pedido do cliente
+        char response[1 + 3 * sizeof(size_t) + sizeof(double)];
+        memset(response, 0, sizeof(response));
+        size_t offset_resp = 0;
+
+        // o resultado da resposta
+        response[offset_resp] = 0;
+        offset_resp +=1;
+
+        //o numero de servidores
+        memcpy(response + offset_resp, &dc.num_servers, sizeof(size_t));
+        offset_resp += sizeof(size_t);
+
+        //ram de cada servidor
+        memcpy(response + offset_resp, &dc.servers[0].total.ram, sizeof(size_t));
+        offset_resp += sizeof(size_t);
+
+        //disk de cada servidor
+        memcpy(response + offset_resp, &dc.servers[0].total.disk, sizeof(size_t));
+        offset_resp += sizeof(size_t);
+
+        //cpus
+        memcpy(response + offset_resp, &dc.servers[0].total.cpu, sizeof(double));
+
+        //enviar pelo fifo as respostas do cliente
+        if(write_all(resp_fd, response, sizeof(response)) != 1){
+            close(req_fd);
+            close(resp_fd);
+            //o servidor continua a atender outros clientes, n retorna 1 (não para)
+            continue;
+        }
+
+        switch(opcode){
+            
+        }
+
+
     }
     
     

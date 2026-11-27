@@ -168,15 +168,19 @@ int cloudIst_connect(char const* req_pipe_path, char const* resp_pipe_path, char
     }
     offset_resp += 1;
 
+    //o numero de servidores
     memcpy(&num_servers, response + offset_resp, sizeof(size_t));
     offset_resp += sizeof(size_t);
 
+    //ram
     memcpy(&ram, response + offset_resp, sizeof(size_t));
     offset_resp += sizeof(size_t);
 
+    //disk
     memcpy(&disk, response + offset_resp, sizeof(size_t));
     offset_resp += sizeof(size_t);
 
+    //cpus
     memcpy(&cpus, response + offset_resp, sizeof(double));
 
     //atualizar as variáveis globais, guardamos o estado delas após o connect
